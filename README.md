@@ -9,5 +9,9 @@
 
 
 ### 2021.10.09更新
-新建了XTask类用于管理任务，XTask是所有任务的基类，
-# test_thread_pool
+* 新建了XTask类用于管理任务，XTask是所有任务的基类，其中定义了纯虚函数Init()来实现多态，要求不同的派生类有不同的初始化方法
+* 对XThreadPool类，需要考虑添加任务时的同步问题，加锁解决线程安全问题，使用C++11提供的thread库，在访问任务list的临界区加锁。
+* 每个连接进来时，通过listen_cb函数把sock传递给task对象，线程池将新来的task加入任务队列里（AddTask函数），并唤醒（Activate函数）子线程，这里唤醒子线程是通过管道（socketpair）向子线程发送消息，更新notify_send_fd，子线程的fds[0]读到消息后，触发回调函数NotifyCallback（），在回调函数里，this所指的线程对象需要获取任务，并初始化任务，这里用到了互斥锁。
+* 任务队列list<Task*>类型，通过指向派生类XFtpServerCMD来写业务需求，每个子线程都创建一个event_base对象，提升并发性能。
+* XFtpServerCMD::Init重写了父类的纯虚函数，bufferevent_setcb 添加读、写、异常处理三种事件，默认的epoll触发模式。
+
